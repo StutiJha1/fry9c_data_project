@@ -1,3 +1,5 @@
 .DS_Store
 fry9c_data.sqlite
 files/
+fry9c_combined.parquet
+fry9c_data.sqlite
