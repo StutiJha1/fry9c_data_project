@@ -1,12 +1,12 @@
-# Step 1–2: Import libraries and connect to database
+# Step 1: Import libraries and connect to database
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Replace this path with the actual path to your SQLite database file
+
 conn = sqlite3.connect('/Users/stutijha/Desktop/FRY9C_DATA_PROJECT/fry9c_data.sqlite')
 
-# Step 3: Query to compare one item across all banks for a specific date
+# Step 2: Query1 to compare one item across all banks for a specific date
 query1 = """
 SELECT 
     bank_name,
@@ -20,7 +20,7 @@ ORDER BY total_assets DESC;
 """
 df1 = pd.read_sql_query(query1, conn)
 
-# Step 4: Query to compare one item across time for one bank
+# Step 3: Query2 to compare one item across time for one bank
 query2 = """
 SELECT 
     report_date,
@@ -33,7 +33,51 @@ ORDER BY report_date;
 """
 df2 = pd.read_sql_query(query2, conn)
 
-# Step 5: Plot bar chart for total assets by bank
+
+# Step 4: Query3 both total assets and deposits for the same date
+query3 = """
+SELECT 
+    bank_name,
+    rssd_id,
+    report_date,
+    ItemName,
+    CAST(REPLACE(Value, ',', '') AS REAL) AS value
+FROM fry9c_combined
+WHERE report_date = '20240930'
+  AND ItemName IN ('BHCK0081', 'BHCK2170');
+"""
+
+df_scatter_raw = pd.read_sql_query(query3, conn)
+
+# Step 5: Pivot the data to get one row per bank with both values
+df_scatter = df_scatter_raw.pivot_table(
+    index=['bank_name', 'rssd_id', 'report_date'],
+    columns='ItemName',
+    values='value'
+).reset_index()
+
+# Rename columns for clarity
+df_scatter = df_scatter.rename(columns={
+    'BHCK0081': 'total_assets',
+    'BHCK2170': 'total_deposits'
+})
+
+# Step 6: Drop rows with missing values
+df_scatter = df_scatter.dropna()
+
+# Step 7: for Q3 Plot scatterplot
+# relationship between total assets and total deposits across banks on 20240930 using a scatterplot.
+plt.figure(figsize=(10, 6))
+plt.scatter(df_scatter['total_assets'], df_scatter['total_deposits'], alpha=0.6, color='purple')
+plt.xlabel("Total Assets")
+plt.ylabel("Total Deposits")
+plt.title("Scatterplot: Total Assets vs Total Deposits (20240930)")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Step 8: for Q1 Plot bar chart for total assets by bank
+#total assets (BHCK0081) for all banks on 20240930 using a bar chart.
 plt.figure(figsize=(12, 6))
 plt.bar(df1['bank_name'], df1['total_assets'], color='skyblue')
 plt.xticks(rotation=90)
@@ -42,7 +86,8 @@ plt.ylabel("Total Assets")
 plt.tight_layout()
 plt.show()
 
-# Step 6: Plot line chart of BHCK2170 for JPMorgan over time
+# Step 9: for Q2 Plot line chart of BHCK2170 for JPMorgan over time
+# a line chart on how BHCK2170 changes over time for JPMorgan_Chase
 df2['report_date'] = pd.to_datetime(df2['report_date'])
 
 plt.figure(figsize=(10, 5))
